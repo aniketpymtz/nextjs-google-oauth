@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSession } from '@/lib/auth';
+import connectDB from '@/lib/mongodb';
+import UserModel from '@/models/User';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -32,8 +34,8 @@ export async function GET(request: NextRequest) {
     }
 
     const tokens = await tokenResponse.json();
-
-    // Get user info
+     
+     // Get user info
     const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
         Authorization: `Bearer ${tokens.access_token}`,
@@ -47,13 +49,36 @@ export async function GET(request: NextRequest) {
     }
 
     const userInfo = await userInfoResponse.json();
+    
+    // Connect to MongoDB
+    await connectDB();
+
+    // Find or create user in database
+    let user = await UserModel.findOne({ googleId: userInfo.id });
+
+    if (!user) {
+      // Create new user
+      user = await UserModel.create({
+        googleId: userInfo.id,
+        email: userInfo.email,
+        name: userInfo.name,
+        picture: userInfo.picture,
+        lastLogin: new Date(),
+      });
+      console.log('✅ New user created:', user.email);
+    } else {
+      // Update last login for existing user
+      user.lastLogin = new Date();
+      await user.save();
+      console.log('✅ Existing user logged in:', user.email);
+    }
 
     // Create session
     await createSession({
-      id: userInfo.id,
-      email: userInfo.email,
-      name: userInfo.name,
-      picture: userInfo.picture,
+      id: user.googleId,
+      email: user.email,
+      name: user.name,
+      picture: user.picture,
     });
 
     return NextResponse.redirect(new URL('/home', request.url));
