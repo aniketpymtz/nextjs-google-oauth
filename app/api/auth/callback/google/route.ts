@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userInfo = await userInfoResponse.json();
+    console.log("user info",userInfo);
     
     // Connect to MongoDB
     await connectDB();

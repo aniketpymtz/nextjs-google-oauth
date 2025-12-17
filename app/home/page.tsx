@@ -1,6 +1,7 @@
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import LogoutButton from '@/components/LogoutButton';
+import UserAddressSection from '@/components/UserAddressSection';
 import Image from 'next/image';
 
 export default async function HomePage() {
@@ -79,6 +80,8 @@ export default async function HomePage() {
               </div>
             </dl>
           </div>
+
+          <UserAddressSection />
         </div>
       </main>
     </div>
