@@ -28,9 +28,6 @@ export default function UserAddressSection() {
       const response = await fetch('/api/user/address');
       const data = await response.json();
       setAddress(data.address);
-      if (data.address) {
-        form.setFieldsValue(data.address);
-      }
     } catch (error) {
       console.error('Error fetching address:', error);
     }

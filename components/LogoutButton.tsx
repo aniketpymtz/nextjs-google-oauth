@@ -1,22 +1,34 @@
 'use client';
 
+import { PoweroffOutlined, SyncOutlined } from '@ant-design/icons';
+import { Button } from 'antd';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function LogoutButton() {
   const router = useRouter();
+   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-    router.refresh();
+    try {
+      setLoading(true);
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+      router.refresh();
+    } catch (error) {
+      setLoading(false);
+    }
   };
 
   return (
-    <button
-      onClick={handleLogout}
-      className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200"
-    >
-      Logout
-    </button>
+    
+     <Button
+          danger
+          icon={<PoweroffOutlined />}
+          loading={loading && { icon: <SyncOutlined spin /> }}
+          onClick={handleLogout}
+        >
+          Logout
+        </Button>
   );
 }
