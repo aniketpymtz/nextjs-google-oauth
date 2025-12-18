@@ -1,23 +1,29 @@
 import mongoose, { Document, Model, Schema } from 'mongoose';
 
-export interface IUserAddress extends Document {
-  googleId: string;
+export interface IAddress {
+  _id?: string;
+  label: string;
   city: string;
   state: string;
   pincode: string;
   country: string;
+}
+
+export interface IUserAddress extends Document {
+  googleId: string;
+  addresses: IAddress[];
   createdAt: Date;
   updatedAt: Date;
 }
 
-const UserAddressSchema = new Schema<IUserAddress>(
+const AddressSchema = new Schema<IAddress>(
   {
-    googleId: {
+    label: {
       type: String,
       required: true,
-      index: true,
+      enum: ['Work', 'Home', 'Friend', 'Other'],
+      default: 'Home',
     },
-    
     city: {
       type: String,
       required: true,
@@ -38,6 +44,24 @@ const UserAddressSchema = new Schema<IUserAddress>(
       required: true,
       trim: true,
       default: 'India',
+    },
+  },
+  {
+    _id: true,
+  }
+);
+
+const UserAddressSchema = new Schema<IUserAddress>(
+  {
+    googleId: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+    addresses: {
+      type: [AddressSchema],
+      default: [],
     },
   },
   {
