@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSession } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
-import UserModel from '@/models/User';
+import connectDB  from '@/lib/mongodb';
+import User from '@/lib/models/User';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -55,11 +55,11 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     // Find or create user in database
-    let user = await UserModel.findOne({ googleId: userInfo.id });
+    let user = await User.findOne({ googleId: userInfo.id });
 
     if (!user) {
       // Create new user
-      user = await UserModel.create({
+      user = await User.create({
         googleId: userInfo.id,
         email: userInfo.email,
         name: userInfo.name,
@@ -70,19 +70,44 @@ export async function GET(request: NextRequest) {
     } else {
       // Update last login for existing user
       user.lastLogin = new Date();
+      user.picture = userInfo.picture; // Update Google photo if changed
       await user.save();
       console.log('✅ Existing user logged in:', user.email);
     }
 
-    // Create session
+    // Create session with custom avatar if set, otherwise Google photo
     await createSession({
       id: user.googleId,
       email: user.email,
       name: user.name,
-      picture: user.picture,
+      picture: user.customAvatar || user.picture,
     });
 
-    return NextResponse.redirect(new URL('/home', request.url));
+    
+    // Return HTML that closes popup and notifies parent
+    return new NextResponse(
+      `<!DOCTYPE html>
+      <html>
+        <head>
+          <title>Login Successful</title>
+        </head>
+        <body>
+          <script>
+            if (window.opener) {
+              window.opener.postMessage({ type: 'oauth-success' }, window.location.origin);
+              window.close();
+            } else {
+              window.location.href = '/home';
+            }
+          </script>
+          <p>Login successful! Redirecting...</p>
+        </body>
+      </html>`,
+      {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' },
+      }
+    );
   } catch (error) {
     console.error('OAuth error:', error);
     return NextResponse.redirect(new URL('/login?error=auth_failed', request.url));

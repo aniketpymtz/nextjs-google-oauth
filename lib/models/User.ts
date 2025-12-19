@@ -1,10 +1,12 @@
-import mongoose, { Document, Model, Schema } from 'mongoose';
+import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IUser extends Document {
   googleId: string;
   email: string;
   name: string;
   picture?: string;
+  customAvatar?: string;
+  bio?: string;
   createdAt: Date;
   updatedAt: Date;
   lastLogin: Date;
@@ -16,21 +18,28 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: true,
       unique: true,
+      index: true,
     },
     email: {
       type: String,
       required: true,
       unique: true,
       lowercase: true,
-      trim: true,
     },
     name: {
       type: String,
       required: true,
-      trim: true,
     },
     picture: {
       type: String,
+    },
+    customAvatar: {
+      type: String,
+    },
+    bio: {
+      type: String,
+      maxlength: 500,
+      default: '',
     },
     lastLogin: {
       type: Date,
@@ -42,7 +51,8 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-// Prevent model overwrite error in development
-const UserModel: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
+// Prevent model recompilation in development
+const User: Model<IUser> =
+  mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 
-export default UserModel;
+export default User;

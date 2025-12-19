@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
-import UserAddressModel from '@/models/UserAddress';
+import UserAddressModel from '@/lib/models/UserAddress';
 
 // GET - Fetch all addresses for the user
 export async function GET(request: NextRequest) {

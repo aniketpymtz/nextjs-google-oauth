@@ -3,9 +3,21 @@ import { redirect } from 'next/navigation';
 import LogoutButton from '@/components/LogoutButton';
 import UserAddressSection from '@/components/UserAddressSection';
 import Image from 'next/image';
+import Link from 'next/link';
+import connectDB  from '@/lib/mongodb';
+import User from '@/lib/models/User';
+import { Button } from 'antd';
 
 export default async function HomePage() {
-  const user = await getSession();
+  const session = await getSession();
+
+  if (!session) {
+    redirect('/login');
+  }
+
+  // Fetch full user data from MongoDB
+  await connectDB();
+  const user = await User.findOne({ googleId: session.id }).lean();
 
   if (!user) {
     redirect('/login');
@@ -17,7 +29,16 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-            <LogoutButton />
+            <div className='flex items-center gap-2'>
+            <Button type="primary">
+              <Link
+                href="/profile/edit"
+              >
+                Edit Profile
+              </Link>
+            </Button>
+              <LogoutButton />
+              </div>
           </div>
         </div>
       </nav>
@@ -25,20 +46,23 @@ export default async function HomePage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="flex items-center gap-6 mb-8">
-            {user.picture && (
+            {(user.customAvatar || user.picture) && (
               <Image
-                src={user.picture}
+                src={user.customAvatar || user.picture || ''}
                 alt={user.name}
-                className="w-20 h-20 rounded-full border-4 border-indigo-500"
-                width={80}
-                height={80}
-                />
+                className="w-24 h-24 rounded-full border-4 border-indigo-500 object-cover"
+                width={96}
+                height={96}
+              />
             )}
-            <div>
+            <div className="flex-1">
               <h2 className="text-3xl font-bold text-gray-800">
                 Welcome back, {user.name}! 👋
               </h2>
               <p className="text-gray-600 mt-1">{user.email}</p>
+              {user.bio && (
+                <p className="text-gray-700 mt-3 italic">&ldquo;{user.bio}&rdquo;</p>
+              )}
             </div>
           </div>
 
@@ -64,7 +88,7 @@ export default async function HomePage() {
             <dl className="grid md:grid-cols-2 gap-4">
               <div>
                 <dt className="text-sm font-medium text-gray-500">User ID</dt>
-                <dd className="mt-1 text-sm text-gray-900">{user.id}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{user.googleId}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Email</dt>
@@ -77,6 +101,18 @@ export default async function HomePage() {
               <div>
                 <dt className="text-sm font-medium text-gray-500">Auth Method</dt>
                 <dd className="mt-1 text-sm text-gray-900">Google OAuth 2.0</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Member Since</dt>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {new Date(user.createdAt).toLocaleDateString()}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Last Login</dt>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {new Date(user.lastLogin).toLocaleDateString()}
+                </dd>
               </div>
             </dl>
           </div>
