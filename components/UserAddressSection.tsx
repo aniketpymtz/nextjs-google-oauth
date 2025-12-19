@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Modal, Form, Input, Button, message, Card, Tag, Select, Skeleton } from 'antd';
+import { useState } from 'react';
+import { Modal, Form, Input, Button, Card, Tag, Select, Skeleton } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { useAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress } from '@/lib/hooks/useAddress';
 
 interface Address {
   _id: string;
@@ -16,29 +17,17 @@ interface Address {
 const ADDRESS_LABELS = ['Work', 'Home', 'Friend', 'Other'];
 
 export default function UserAddressSection() {
-  const [addresses, setAddresses] = useState<Address[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [fetchingAddresses, setFetchingAddresses] = useState(true);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [form] = Form.useForm();
 
-  useEffect(() => {
-    fetchAddresses();
-  }, []);
+  // TanStack Query hooks
+  const { data: addresses = [], isLoading: fetchingAddresses } = useAddresses();
+  const createAddress = useCreateAddress();
+  const updateAddress = useUpdateAddress();
+  const deleteAddress = useDeleteAddress();
 
-  const fetchAddresses = async () => {
-    try {
-      setFetchingAddresses(true);
-      const response = await fetch('/api/user/address');
-      const data = await response.json();
-      setAddresses(data.addresses || []);
-    } catch (error) {
-      console.error('Error fetching addresses:', error);
-    } finally {
-      setFetchingAddresses(false);
-    }
-  };
+  const loading = createAddress.isPending || updateAddress.isPending;
 
   const handleAdd = () => {
     setEditingAddress(null);
@@ -54,58 +43,29 @@ export default function UserAddressSection() {
   };
 
   const handleSubmit = async (values: Omit<Address, '_id'>) => {
-    setLoading(true);
-    try {
-      const method = editingAddress ? 'PUT' : 'POST';
-      const body = editingAddress
-        ? { ...values, addressId: editingAddress._id }
-        : values;
-
-      const response = await fetch('/api/user/address', {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
+    if (editingAddress) {
+      updateAddress.mutate(
+        { ...values, addressId: editingAddress._id },
+        {
+          onSuccess: () => {
+            setIsModalOpen(false);
+            form.resetFields();
+            setEditingAddress(null);
+          },
+        }
+      );
+    } else {
+      createAddress.mutate(values, {
+        onSuccess: () => {
+          setIsModalOpen(false);
+          form.resetFields();
         },
-        body: JSON.stringify(body),
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAddresses(data.addresses);
-        message.success(
-          editingAddress ? 'Address updated successfully!' : 'Address added successfully!'
-        );
-        setIsModalOpen(false);
-        form.resetFields();
-        setEditingAddress(null);
-      } else {
-        message.error(editingAddress ? 'Failed to update address' : 'Failed to add address');
-      }
-    } catch (error) {
-      console.error('Error saving address:', error);
-      message.error('Failed to save address');
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleDelete = async (addressId: string) => {
-    try {
-      const response = await fetch(`/api/user/address?addressId=${addressId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAddresses(data.addresses);
-        message.success('Address deleted successfully!');
-      } else {
-        message.error('Failed to delete address');
-      }
-    } catch (error) {
-      console.error('Error deleting address:', error);
-      message.error('Failed to delete address');
-    }
+  const handleDelete = (addressId: string) => {
+    deleteAddress.mutate(addressId);
   };
 
   const getTagColor = (label: string) => {
