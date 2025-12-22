@@ -4,7 +4,7 @@ import LogoutButton from '@/components/LogoutButton';
 import UserAddressSection from '@/components/UserAddressSection';
 import Image from 'next/image';
 import Link from 'next/link';
-import connectDB  from '@/lib/mongodb';
+import connectDB from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import { Button } from 'antd';
 import PaymentButton from '@/components/TestBuyButton';
@@ -31,16 +31,18 @@ export default async function HomePage() {
           <div className="flex justify-between items-center py-4">
             <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
             <div className='flex items-center gap-2'>
-            <PaymentButton />
-            <Button type="primary">
-              <Link
-                href="/profile/edit"
-              >
-                Edit Profile
-              </Link>
-            </Button>
+             <div className='hidden md:block'>
+             <PaymentButton />
+             </div>    
+             <Button type="primary">
+                <Link
+                  href="/profile/edit"
+                >
+                  Edit Profile
+                </Link>
+              </Button>
               <LogoutButton />
-              </div>
+            </div>
           </div>
         </div>
       </nav>
@@ -69,17 +71,20 @@ export default async function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl">
+            <div className="bg-linear-to-br from-blue-50 to-blue-100 p-6 rounded-xl">
               <h3 className="text-lg font-semibold text-blue-800 mb-2">Profile</h3>
               <p className="text-blue-600">Your account is active and secured.</p>
+              <div className='block md:hidden'>
+             <PaymentButton />
+             </div>    
             </div>
-            
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl">
+
+            <div className="bg-linear-to-br from-green-50 to-green-100 p-6 rounded-xl">
               <h3 className="text-lg font-semibold text-green-800 mb-2">Status</h3>
               <p className="text-green-600">Successfully authenticated via Google OAuth.</p>
             </div>
-            
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl">
+
+            <div className="bg-linear-to-br from-purple-50 to-purple-100 p-6 rounded-xl">
               <h3 className="text-lg font-semibold text-purple-800 mb-2">Security</h3>
               <p className="text-purple-600">Your session is encrypted and protected.</p>
             </div>
