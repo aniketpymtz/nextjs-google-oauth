@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import Image from 'next/image';
+import { useState } from 'react';
+import { Form, Input, Button, Avatar, Upload, message } from 'antd';
+import { UserOutlined, UploadOutlined, LoadingOutlined } from '@ant-design/icons';
+import type { RcFile } from 'antd/es/upload/interface';
 
 interface ProfileEditorProps {
   initialName: string;
@@ -18,30 +20,28 @@ export default function ProfileEditor({
   onSave,
   onCancel,
 }: ProfileEditorProps) {
-  const [name, setName] = useState(initialName);
-  const [bio, setBio] = useState(initialBio);
+  const [form] = Form.useForm();
   const [avatar, setAvatar] = useState(initialAvatar);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [uploadError, setUploadError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Please select an image file');
-      return;
+  const beforeUpload = (file: RcFile) => {
+    const isImage = file.type.startsWith('image/');
+    if (!isImage) {
+      message.error('You can only upload image files!');
+      return false;
     }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError('Image must be less than 5MB');
-      return;
+    const isLt5M = file.size / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      message.error('Image must be smaller than 5MB!');
+      return false;
     }
+    return true;
+  };
 
-    setUploadError('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleUpload = async (options: any) => {
+    const { file, onSuccess, onError } = options;
     setIsUploading(true);
 
     try {
@@ -60,127 +60,113 @@ export default function ProfileEditor({
 
       const data = await response.json();
       setAvatar(data.url);
+      message.success('Avatar uploaded successfully!');
+      onSuccess(data);
     } catch (error) {
       console.error('Upload error:', error);
-      setUploadError(error instanceof Error ? error.message : 'Failed to upload image');
+      message.error(error instanceof Error ? error.message : 'Failed to upload image');
+      onError(error);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: { name: string; bio: string }) => {
     setIsSaving(true);
 
     try {
       await onSave({
-        name,
-        bio,
+        name: values.name,
+        bio: values.bio || '',
         customAvatar: avatar !== initialAvatar ? avatar : undefined,
       });
+      message.success('Profile updated successfully!');
     } catch (error) {
       console.error('Save error:', error);
+      message.error('Failed to update profile');
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <Form
+      form={form}
+      layout="vertical"
+      initialValues={{ name: initialName, bio: initialBio }}
+      onFinish={handleSubmit}
+      className="space-y-6"
+    >
       {/* Avatar Upload */}
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative">
-          <Image
-            src={avatar}
-            alt={name}
-            width={120}
-            height={120}
-            className="w-30 h-30 rounded-full border-4 border-indigo-200 object-cover"
-          />
-          {isUploading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-            </div>
-          )}
-        </div>
+      <div className="flex flex-col items-center gap-4 mb-6">
+        <Avatar
+          size={120}
+          src={avatar}
+          icon={<UserOutlined />}
+          className="border-4 border-indigo-200"
+        />
         
-        <div className="flex flex-col items-center gap-2">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+        <Upload
+          customRequest={handleUpload}
+          beforeUpload={beforeUpload}
+          showUploadList={false}
+          accept="image/*"
+        >
+          <Button
+            icon={isUploading ? <LoadingOutlined /> : <UploadOutlined />}
+            loading={isUploading}
+            type="primary"
           >
             {isUploading ? 'Uploading...' : 'Change Avatar'}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          <p className="text-xs text-gray-500">JPG, PNG, WebP or GIF (Max 5MB)</p>
-          {uploadError && (
-            <p className="text-sm text-red-600">{uploadError}</p>
-          )}
-        </div>
+          </Button>
+        </Upload>
+        <p className="text-xs text-gray-500">JPG, PNG, WebP or GIF (Max 5MB)</p>
       </div>
 
       {/* Name Field */}
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-          Display Name
-        </label>
-        <input
-          id="name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          maxLength={100}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          placeholder="Your name"
-        />
-      </div>
+      <Form.Item
+        label="Display Name"
+        name="name"
+        rules={[
+          { required: true, message: 'Please enter your name!' },
+          { max: 100, message: 'Name cannot exceed 100 characters!' },
+        ]}
+      >
+        <Input placeholder="Your name" size="large" />
+      </Form.Item>
 
       {/* Bio Field */}
-      <div>
-        <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-          Bio
-        </label>
-        <textarea
-          id="bio"
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
-          maxLength={500}
-          rows={4}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+      <Form.Item
+        label="Bio"
+        name="bio"
+        rules={[{ max: 500, message: 'Bio cannot exceed 500 characters!' }]}
+      >
+        <Input.TextArea
           placeholder="Tell us about yourself..."
+          rows={4}
+          showCount
+          maxLength={500}
+          size="large"
         />
-        <p className="mt-1 text-xs text-gray-500 text-right">
-          {bio.length}/500 characters
-        </p>
-      </div>
+      </Form.Item>
 
       {/* Action Buttons */}
-      <div className="flex gap-3 justify-end">
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isSaving}
-          className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isSaving || isUploading}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-        >
-          {isSaving ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
-    </form>
+      <Form.Item className="mb-0">
+        <div className="flex gap-3 justify-end">
+          <Button onClick={onCancel} disabled={isSaving} size="large">
+            Cancel
+          </Button>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={isSaving}
+            disabled={isUploading}
+            size="large"
+          >
+            Save Changes
+          </Button>
+        </div>
+      </Form.Item>
+    </Form>
   );
 }

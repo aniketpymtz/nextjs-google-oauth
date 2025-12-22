@@ -7,6 +7,7 @@ import Link from 'next/link';
 import connectDB  from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import { Button } from 'antd';
+import PaymentButton from '@/components/TestBuyButton';
 
 export default async function HomePage() {
   const session = await getSession();
@@ -30,6 +31,7 @@ export default async function HomePage() {
           <div className="flex justify-between items-center py-4">
             <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
             <div className='flex items-center gap-2'>
+            <PaymentButton />
             <Button type="primary">
               <Link
                 href="/profile/edit"
