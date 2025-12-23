@@ -1,18 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Modal, Form, Input, Button, Card, Tag, Select, Skeleton } from 'antd';
+import { useState, useEffect } from 'react';
+import { Modal, Form, Input, Button, Card, Tag, Select, Skeleton, message } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { useAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress } from '@/lib/hooks/useAddress';
-
-interface Address {
-  _id: string;
-  label: string;
-  city: string;
-  state: string;
-  pincode: string;
-  country: string;
-}
+import { useAddressStore, type Address } from '@/lib/store/addressStore';
 
 const ADDRESS_LABELS = ['Work', 'Home', 'Friend', 'Other'];
 
@@ -21,13 +12,14 @@ export default function UserAddressSection() {
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [form] = Form.useForm();
 
-  // TanStack Query hooks
-  const { data: addresses = [], isLoading: fetchingAddresses } = useAddresses();
-  const createAddress = useCreateAddress();
-  const updateAddress = useUpdateAddress();
-  const deleteAddress = useDeleteAddress();
+  // Zustand store
+  const { addresses, isLoading, fetchAddresses, createAddress, updateAddress, deleteAddress } = useAddressStore();
 
-  const loading = createAddress.isPending || updateAddress.isPending;
+  useEffect(() => {
+    if (addresses.length === 0 && !isLoading) {
+      fetchAddresses();
+    }
+  }, [addresses.length, isLoading, fetchAddresses]);
 
   const handleAdd = () => {
     setEditingAddress(null);
@@ -43,29 +35,29 @@ export default function UserAddressSection() {
   };
 
   const handleSubmit = async (values: Omit<Address, '_id'>) => {
-    if (editingAddress) {
-      updateAddress.mutate(
-        { ...values, addressId: editingAddress._id },
-        {
-          onSuccess: () => {
-            setIsModalOpen(false);
-            form.resetFields();
-            setEditingAddress(null);
-          },
-        }
-      );
-    } else {
-      createAddress.mutate(values, {
-        onSuccess: () => {
-          setIsModalOpen(false);
-          form.resetFields();
-        },
-      });
+    try {
+      if (editingAddress) {
+        await updateAddress(editingAddress._id, values);
+        message.success('Address updated successfully!');
+      } else {
+        await createAddress(values);
+        message.success('Address added successfully!');
+      }
+      setIsModalOpen(false);
+      form.resetFields();
+      setEditingAddress(null);
+    } catch (error) {
+      message.error(editingAddress ? 'Failed to update address' : 'Failed to add address');
     }
   };
 
-  const handleDelete = (addressId: string) => {
-    deleteAddress.mutate(addressId);
+  const handleDelete = async (addressId: string) => {
+    try {
+      await deleteAddress(addressId);
+      message.success('Address deleted successfully!');
+    } catch (error) {
+      message.error('Failed to delete address');
+    }
   };
 
   const getTagColor = (label: string) => {
@@ -96,7 +88,7 @@ export default function UserAddressSection() {
           </Button>
         </div>
 
-        {fetchingAddresses ? (
+        {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
               <Card key={i} className="shadow-sm p-2">
@@ -228,7 +220,7 @@ export default function UserAddressSection() {
             >
               Cancel
             </Button>
-            <Button type="primary" htmlType="submit" loading={loading} className="bg-indigo-600">
+            <Button type="primary" htmlType="submit" loading={isLoading} className="bg-indigo-600">
               {editingAddress ? 'Update' : 'Add'} Address
             </Button>
           </div>

@@ -1,12 +1,36 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useUserStore } from '@/lib/store/userStore';
+import { useEffect } from 'react';
+
 export default function LoginPage() {
+  const router = useRouter();
+  const fetchUser = useUserStore((state) => state.fetchUser);
+
+  useEffect(() => {
+    // Listen for OAuth success from popup
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'oauth-success') {
+        // Fetch user data after successful login
+        await fetchUser();
+        // Redirect to home
+        router.push('/home');
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [fetchUser, router]);
+
   const handleGoogleLogin = () => {
     window.location.href = '/api/auth/google';
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100">
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome</h1>

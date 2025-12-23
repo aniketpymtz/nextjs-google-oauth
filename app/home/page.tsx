@@ -1,27 +1,39 @@
-import { getSession } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUserStore } from '@/lib/store/userStore';
 import LogoutButton from '@/components/LogoutButton';
 import UserAddressSection from '@/components/UserAddressSection';
 import Image from 'next/image';
 import Link from 'next/link';
-import connectDB from '@/lib/mongodb';
-import User from '@/lib/models/User';
 import { Button } from 'antd';
 import PaymentButton from '@/components/TestBuyButton';
 
-export default async function HomePage() {
-  const session = await getSession();
+export default function HomePage() {
+  const router = useRouter();
+  const { user, isLoading, fetchUser } = useUserStore();
 
-  if (!session) {
-    redirect('/login');
-  }
+  useEffect(() => {
+    // Fetch user data on mount if not already loaded
+    if (!user && !isLoading) {
+      fetchUser().catch(() => {
+        // If fetch fails (unauthorized), redirect to login
+        router.push('/login');
+      });
+    }
+  }, [user, isLoading, fetchUser, router]);
 
-  // Fetch full user data from MongoDB
-  await connectDB();
-  const user = await User.findOne({ googleId: session.id }).lean();
-
-  if (!user) {
-    redirect('/login');
+  // Show loading state
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-purple-50 to-pink-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your profile...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -124,6 +136,7 @@ export default async function HomePage() {
             </dl>
           </div>
 
+          <UserAddressSection />
           <UserAddressSection />
         </div>
       </main>

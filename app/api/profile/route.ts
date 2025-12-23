@@ -88,10 +88,11 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      id: user.googleId,
+      googleId: user.googleId,
       email: user.email,
       name: user.name,
-      picture: user.customAvatar || user.picture,
+      picture: user.picture,
+      customAvatar: user.customAvatar,
       bio: user.bio,
       createdAt: user.createdAt,
       lastLogin: user.lastLogin,
