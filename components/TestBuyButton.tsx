@@ -10,6 +10,15 @@ interface CheckoutOptions {
   currency: string;
   orderId: string;
   name: string;
+  prefill?: {
+    name: string;
+    email: string;
+    contact: string;
+  };
+  notes?: Record<string, string>;
+  theme?: {
+    color: string;
+  };
   handler: (response: { paymentId: string }) => void;
 }
 
@@ -30,6 +39,18 @@ export default function PaymentButton() {
         currency: 'INR',
         orderId: 'order_' + Date.now(),
         name: 'Next.js Store',
+        prefill: {
+      name: 'John Doe',
+      email: 'john@example.com',
+      contact: '917045050604',
+    },
+    notes: {
+      address: '123 Main Street',
+      merchant_order_id: '12345',
+    },
+    theme: {
+      color: '#1e40af',
+    },
         handler: (res) => alert(res.paymentId)
       });
     }
